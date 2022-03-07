@@ -4,15 +4,129 @@ using UnityEngine;
 
 public class MyGrid : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    public Transform player;
+    public Vector2 gridWorldSize;
+    public float nodeRadius;
+    public Node[,] grid;
+    float nodeDiameter;
+    int gridSizeX, gridSizeY;
+
+    public void Initialize()
     {
-        
+        nodeDiameter = 2 * nodeRadius;
+        gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter);
+        gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
+        print(gridSizeX);
+        CreateGrid();
+        ConfigureCells();
+        // print(grid.Length);
     }
 
-    // Update is called once per frame
-    void Update()
+    void CreateGrid()
     {
-        
+        grid = new Node[gridSizeX, gridSizeY];
+        Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.up * gridWorldSize.y / 2;
+
+        for(int x = 0; x < gridSizeX; x++)
+        {
+            for(int y = 0; y < gridSizeY; y++)
+            {
+                Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius)
+                                    + Vector3.up * (y * nodeDiameter + nodeRadius);
+                print(worldPoint);
+                grid[x, y] = new Node(worldPoint);
+            }
+        }
+    }
+
+    public Node NodeFromWorldPoint(Vector3 worldPosition)
+    {
+        float percentX = (worldPosition.x + gridWorldSize.x / 2) / gridWorldSize.x;
+        float percentY = (worldPosition.y + gridWorldSize.y / 2) / gridWorldSize.y;
+        percentX = Mathf.Clamp01(percentX);
+        percentY = Mathf.Clamp01(percentY);
+
+        int x = Mathf.RoundToInt((gridSizeX - 1) * percentX);
+        int y = Mathf.RoundToInt((gridSizeY - 1) * percentY);
+        return grid[x, y];
+    }
+
+    public void SetNodeFromWorldPoint(Vector3 worldPosition, Node node)
+    {
+        float percentX = (worldPosition.x + gridWorldSize.x / 2) / gridWorldSize.x;
+        float percentY = (worldPosition.y + gridWorldSize.y / 2) / gridWorldSize.y;
+        percentX = Mathf.Clamp01(percentX);
+        percentY = Mathf.Clamp01(percentY);
+
+        int x = Mathf.RoundToInt((gridSizeX - 1) * percentX);
+        int y = Mathf.RoundToInt((gridSizeY - 1) * percentY);
+        grid[x, y] = node;
+    }
+
+    public Node NodeFromGridPoint(int x, int y)
+    {
+        return grid[x, y];
+    }
+
+    void OnDrawGizmos()
+    {
+        // Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, gridWorldSize.y, 1.0f));
+
+        // if(grid != null)
+        // {
+        //     // Node playerNode = NodeFromWorldPoint(player.position);
+        //     foreach(Node node in grid)
+        //     {
+        //         Gizmos.color = Color.black;
+        //         // if(playerNode == node)
+        //         // {
+        //         //     Gizmos.color = Color.green;
+        //         // }
+        //         Gizmos.DrawCube(node.worldPosition, Vector3.one * (nodeDiameter));
+        //     }
+        // }
+    }
+
+    public int columns
+    {
+        get { return Mathf.RoundToInt(grid.Length / gridSizeX); }
+    }
+
+    public int rows
+    {
+        get { return Mathf.RoundToInt(grid.Length / gridSizeY); }
+    }
+
+    public void ConfigureCells()
+    {
+        foreach(Node node in grid)
+        {
+            Node northCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x, node.worldPosition.y - 1.0f, 0.0f));
+            Node southCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x, -node.worldPosition.y + 1.0f, 0.0f));
+            Node eastCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x + 1.0f, node.worldPosition.y, 0.0f));
+            Node westCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x - 1.0f, node.worldPosition.y, 0.0f));
+
+            if(northCell.worldPosition != node.worldPosition)
+            {
+                node.north = northCell;
+            }
+            if(southCell.worldPosition != node.worldPosition)
+            {
+                node.south = southCell;
+            }
+            if(eastCell.worldPosition != node.worldPosition)
+            {
+                node.east = eastCell;
+            }
+            if(westCell.worldPosition != node.worldPosition)
+            {
+                node.west = westCell;
+            }
+        }
+    }
+
+    public Node GetRandomCell()
+    {
+        return NodeFromGridPoint(Random.Range(0, this.columns), Random.Range(0, this.rows));
     }
 }

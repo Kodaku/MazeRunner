@@ -1,45 +1,44 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class RecursiveBacktracker
 {
-    private MyGrid m_grid;
-
-    public RecursiveBacktracker(MyGrid grid)
+    public void On(ref MyGrid grid)
     {
-        m_grid = grid;
-    }
-    
-    public MyGrid On()
-    {
-        Node start = m_grid.GetRandomCell();
-        Stack<Node> stack = new Stack<Node>();
+        Cell start = grid.GetRandomCell;
+        Stack<Cell> stack = new Stack<Cell>();
         stack.Push(start);
 
-        while(stack.Count > 0)
+        while(stack.Any())
         {
-            Node current = stack.Pop();
-            List<Node> validNeighbours = new List<Node>();
-            Node[] currentNeighbours = current.GetNeighbours();
-            foreach(Node neighbour in currentNeighbours)
+            Cell current = stack.Peek();
+            Dictionary<CellLocation, Cell> neighbors = grid.GetCellNeighbors(current.row, current.column);
+            Dictionary<CellLocation, Cell> validNeighbors = new Dictionary<CellLocation, Cell>();
+            foreach(CellLocation cellLocation in neighbors.Keys)
             {
-                if(neighbour.GetLinks().Count == 0)
+                Cell neighbor = neighbors[cellLocation];
+                if(neighbor.GetLinks().Count == 0)
                 {
-                    validNeighbours.Add(neighbour);
+                    validNeighbors.Add(cellLocation, neighbor);
                 }
             }
 
-            if(validNeighbours.Count > 0)
+            // neighbors = [neighbor for neighbor in current.neighbors() if len(neighbor.links) == 0]
+
+            if(validNeighbors.Count == 0)
             {
-                int randomIndex = Random.Range(0, validNeighbours.Count);
-                Node neighbour = validNeighbours[randomIndex];
-                current.Link(neighbour);
-                stack.Push(neighbour);
-                // stack.Push(current);
-                m_grid.SetNodeFromWorldPoint(current.worldPosition, current);
+                stack.Pop();
+            }
+            else
+            {
+                int index = Random.Range(0, validNeighbors.Keys.Count);
+                Cell neighbor = validNeighbors[validNeighbors.Keys.ToArray()[index]];
+                current.Link(validNeighbors.Keys.ToArray()[index]);
+                stack.Push(neighbor);
+                grid.SetCellAt(current.row, current.column, current);
             }
         }
-        return m_grid;
     }
 }

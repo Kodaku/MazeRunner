@@ -2,131 +2,225 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MyGrid : MonoBehaviour
+[System.Serializable]
+public class MyGrid
 {
-    public Transform player;
-    public Vector2 gridWorldSize;
-    public float nodeRadius;
-    public Node[,] grid;
-    float nodeDiameter;
-    int gridSizeX, gridSizeY;
+    protected Cell[,] grid;
 
-    public void Initialize()
+    private int m_rows;
+    private int m_columns;
+    [System.NonSerialized]
+    private Distances m_distances;
+    public Distances distances { get { return m_distances; } set { m_distances = value; } }
+
+    public MyGrid(int rows, int columns)
     {
-        nodeDiameter = 2 * nodeRadius;
-        gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter);
-        gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
-        print(gridSizeX);
-        CreateGrid();
+        m_rows = rows;
+        m_columns = columns;
+        PrepareGrid();
         ConfigureCells();
-        // print(grid.Length);
     }
 
-    void CreateGrid()
+    protected virtual void PrepareGrid()
     {
-        grid = new Node[gridSizeX, gridSizeY];
-        Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.up * gridWorldSize.y / 2;
-
-        for(int x = 0; x < gridSizeX; x++)
+        grid = new Cell[m_rows, m_columns];
+        for (var i = 0; i < m_rows; i++)
         {
-            for(int y = 0; y < gridSizeY; y++)
+            for (var j = 0; j < m_columns; j++)
             {
-                Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius)
-                                    + Vector3.up * (y * nodeDiameter + nodeRadius);
-                print(worldPoint);
-                grid[x, y] = new Node(worldPoint);
+                grid[i, j] = new Cell(i, j);
             }
         }
-    }
-
-    public Node NodeFromWorldPoint(Vector3 worldPosition)
-    {
-        float percentX = (worldPosition.x + gridWorldSize.x / 2) / gridWorldSize.x;
-        float percentY = (worldPosition.y + gridWorldSize.y / 2) / gridWorldSize.y;
-        percentX = Mathf.Clamp01(percentX);
-        percentY = Mathf.Clamp01(percentY);
-
-        int x = Mathf.RoundToInt((gridSizeX - 1) * percentX);
-        int y = Mathf.RoundToInt((gridSizeY - 1) * percentY);
-        return grid[x, y];
-    }
-
-    public void SetNodeFromWorldPoint(Vector3 worldPosition, Node node)
-    {
-        float percentX = (worldPosition.x + gridWorldSize.x / 2) / gridWorldSize.x;
-        float percentY = (worldPosition.y + gridWorldSize.y / 2) / gridWorldSize.y;
-        percentX = Mathf.Clamp01(percentX);
-        percentY = Mathf.Clamp01(percentY);
-
-        int x = Mathf.RoundToInt((gridSizeX - 1) * percentX);
-        int y = Mathf.RoundToInt((gridSizeY - 1) * percentY);
-        grid[x, y] = node;
-    }
-
-    public Node NodeFromGridPoint(int x, int y)
-    {
-        return grid[x, y];
-    }
-
-    void OnDrawGizmos()
-    {
-        // Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, gridWorldSize.y, 1.0f));
-
-        // if(grid != null)
-        // {
-        //     // Node playerNode = NodeFromWorldPoint(player.position);
-        //     foreach(Node node in grid)
-        //     {
-        //         Gizmos.color = Color.black;
-        //         // if(playerNode == node)
-        //         // {
-        //         //     Gizmos.color = Color.green;
-        //         // }
-        //         Gizmos.DrawCube(node.worldPosition, Vector3.one * (nodeDiameter));
-        //     }
-        // }
-    }
-
-    public int columns
-    {
-        get { return Mathf.RoundToInt(grid.Length / gridSizeX); }
     }
 
     public int rows
     {
-        get { return Mathf.RoundToInt(grid.Length / gridSizeY); }
+        get { return m_rows; }
     }
 
-    public void ConfigureCells()
+    public int columns
     {
-        foreach(Node node in grid)
-        {
-            Node northCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x, node.worldPosition.y - 1.0f, 0.0f));
-            Node southCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x, -node.worldPosition.y + 1.0f, 0.0f));
-            Node eastCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x + 1.0f, node.worldPosition.y, 0.0f));
-            Node westCell = NodeFromWorldPoint(new Vector3(node.worldPosition.x - 1.0f, node.worldPosition.y, 0.0f));
+        get { return m_columns; }
+    }
 
-            if(northCell.worldPosition != node.worldPosition)
+    private void ConfigureCells()
+    {
+        for(int i = 0; i < m_rows; i++)
+        {
+            for(int j = 0; j < m_columns; j++)
             {
-                node.north = northCell;
-            }
-            if(southCell.worldPosition != node.worldPosition)
-            {
-                node.south = southCell;
-            }
-            if(eastCell.worldPosition != node.worldPosition)
-            {
-                node.east = eastCell;
-            }
-            if(westCell.worldPosition != node.worldPosition)
-            {
-                node.west = westCell;
+                Cell cell = grid[i, j];
+                if(i - 1 >= 0)
+                {
+                    cell.Unlink(CellLocation.SOUTH, grid[i - 1, j]);
+                }
+                if(j - 1 >= 0)
+                {
+                    cell.Unlink(CellLocation.WEST, grid[i, j - 1]);
+                }
+                if(i + 1 < m_rows)
+                {
+                    cell.Unlink(CellLocation.NORTH, grid[i + 1, j]);
+                }
+                if(j + 1 < m_columns)
+                {
+                    cell.Unlink(CellLocation.EAST, grid[i, j + 1]);
+                }
+                grid[i, j] = cell;
             }
         }
     }
 
-    public Node GetRandomCell()
+    public Cell CellAt(int row, int column)
     {
-        return NodeFromGridPoint(Random.Range(0, this.columns), Random.Range(0, this.rows));
+        if(row >= 0 && row < rows && column >= 0 && column < columns)
+        {
+            return grid[row, column];
+        }
+        return null;
     }
+
+    public Cell WorldPointToCell(Vector3 position)
+    {
+        int row = Mathf.RoundToInt(position.y);
+        int column = Mathf.RoundToInt(position.x);
+        return grid[row, column];
+    }
+
+    public void SetCellAt(int row, int column, Cell cell)
+    {
+        if(row >= 0 && row < rows && column >= 0 && column < columns)
+        {
+            grid[row, column] = cell;
+        }
+    }
+
+    public Dictionary<CellLocation, Cell> GetCellNeighbors(int row, int column)
+    {
+        Cell current = grid[row, column];
+        Dictionary<CellLocation, Cell> neighbors = new Dictionary<CellLocation, Cell>();
+
+        if(row - 1 >= 0)
+        {
+            neighbors.Add(CellLocation.SOUTH, grid[row - 1, column]);
+        }
+        if(column - 1 >= 0)
+        {
+            neighbors.Add(CellLocation.WEST, grid[row, column - 1]);
+        }
+        if(row + 1 < m_rows)
+        {
+            neighbors.Add(CellLocation.NORTH, grid[row + 1, column]);
+        }
+        if(column + 1 < m_columns)
+        {
+            neighbors.Add(CellLocation.EAST, grid[row, column + 1]);
+        }
+
+        return neighbors;
+    }
+
+    // protected IEnumerable<Cell> GetRow(int row)
+    // {
+    //     for (var i = 0; i < Rows; i++)
+    //     {
+    //         for (var j = 0; j < Rows; j++)
+    //         {
+    //             if (i == row)
+    //                 yield return this[i, j];
+    //         }
+    //     }
+    // }
+
+    // public List<List<Cell>> GetAllRows()
+    // {
+    //     var results = new List<List<Cell>>();
+    //     for (var i = 0; i < Rows; i++)
+    //     {
+    //         var innerList = new List<Cell>();
+    //         for (var j = 0; j < Rows; j++)
+    //         {
+    //             innerList.Add(this[i, j]);
+    //         }
+    //         results.Add(innerList);
+    //     }
+    //     return results;
+    // }
+
+    // public IEnumerable<Cell> GetAllCells()
+    // {
+    //     for (int i = 0; i < Rows; i++)
+    //     {
+    //         for (var j = 0; j < Columns; j++)
+    //         {
+    //             yield return this[i, j];
+    //         }
+    //     }
+    // }
+
+    public virtual Cell GetRandomCell
+    {
+        get
+        {
+            var i = Random.Range(0, m_rows - 1);
+            var j = Random.Range(0, m_columns - 1);
+            return grid[i, j];
+        }
+    }
+
+    #region To Display / Debug Grid
+    public virtual string ContentsOf(Cell cell)
+    {
+        return "   ";
+    }
+
+    public virtual string ToString(bool displayGridCoordinates)
+    {
+        return string.Empty;
+    }
+
+    public override string ToString()
+    {
+        return ToString(false);
+    }
+
+    public string ToDebug()
+    {
+        var output = string.Empty;
+
+        return output;
+    }
+
+    #endregion
+
+    #region Helper Methods  
+
+    /// <summary>IEnumerator for 2-D cell array.</summary>
+    // public IEnumerator<Cell> GetEnumerator()
+    // {
+    //     for (var i = 0; i < Rows; i++)
+    //     {
+    //         for (var j = 0; j < Rows; j++)
+    //         {
+    //             yield return grid[i, j];
+    //         }
+    //     }
+    // }
+
+    // /// <summary>2-D Array Accessor method.</summary>
+    // public Cell this[int row, int column]
+    // {
+    //     get
+    //     {
+    //         if (row < 0 || row > Rows - 1) return null;
+    //         if (column < 0 || column > Columns - 1) return null;
+    //         return grid[row, column];
+    //     }
+    //     set
+    //     {
+    //         grid[row, column] = value;
+    //     }
+    // }
+
+    #endregion
 }

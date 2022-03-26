@@ -28,12 +28,12 @@ public class Main : MonoBehaviour
         player = GameObject.Find("Player").GetComponent<Player>();
         debugger = GameObject.Find("Debugger").GetComponent<Debugger>();
         player.LoadData();
-        grid = new MyGrid(25, 25);
-        RecursiveBacktracker recursiveBacktracker = new RecursiveBacktracker();
+        // grid = new MyGrid(25, 25);
+        // RecursiveBacktracker recursiveBacktracker = new RecursiveBacktracker();
 
-        recursiveBacktracker.On(ref grid);
+        // recursiveBacktracker.On(ref grid);
         // Serializer.WriteToBinaryFile<MyGrid>("Assets/Resources/Grid.txt", grid);
-        // grid = Serializer.ReadFromBinaryFile<MyGrid>("Assets/Resources/Grid.txt");
+        grid = Serializer.ReadFromBinaryFile<MyGrid>("Assets/Resources/Grid.txt");
         Initialize();
     }
     // Start is called before the first frame update
@@ -146,15 +146,17 @@ public class Main : MonoBehaviour
 
             player.Move(world);
             player.SetNextState(world);
-            player.UpdateAllTau();
+
+            // player.UpdateAllTau();
+
             if(player.hasFoundGoal)
             {
                 print("Found goal");
                 player.hasFoundGoal = false;
                 player.QUpdate(100.0f, true);
-                player.UpdateModel(100.0f);
-                // player.SaveData();
-                // dataManager.RegisterObservation();
+                // player.UpdateModel(100.0f);
+                player.SaveData();
+                dataManager.RegisterObservation();
                 Destroy(currentMaze);
                 Initialize();
             }
@@ -162,19 +164,18 @@ public class Main : MonoBehaviour
             {
                 dataManager.CollidedWithWalls();
                 player.QUpdate(-1.0f, false);
-                player.UpdateModel(-1.0f);
+                // player.UpdateModel(-1.0f);
             }
             else
             {
                 player.QUpdate(-1.0f, false);
-                player.UpdateModel(-1.0f);
+                // player.UpdateModel(-1.0f);
             }
 
-            for(int i = 0; i < 100; i++)
-            {
-                // print("Planning Step");
-                player.RunSimulation();
-            }
+            // for(int i = 0; i < 100; i++)
+            // {
+            //     player.RunSimulation();
+            // }
 
             currentPlayerUpdateTimer = 0.0f;
         }

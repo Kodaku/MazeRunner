@@ -89,6 +89,7 @@ public class Player : MonoBehaviour
             PlayerState playerState = new PlayerState(currentState.Item1, currentState.Item2);
             q.AddPlayerState(playerState);
             policy.AddPlayerState(playerState);
+            // model.AddPlayerState(playerState);
             return GetBestAction();
         }
     }
@@ -98,10 +99,7 @@ public class Player : MonoBehaviour
         Tuple<int, int> position = Tuple.Create(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y));
         List<string> cellsState = world[position];
         Vector3 tmpPosition = transform.position;
-        foreach(string cellState in cellsState)
-        {
-            // print(cellState);
-        }
+
         if(currentAction == Action.UP && !cellsState.Contains("NorthBlocked"))
         {
             Tuple<int, int> newPosition = Tuple.Create(position.Item1, position.Item2 + 1);
@@ -145,7 +143,6 @@ public class Player : MonoBehaviour
     {
         if(collider.gameObject.CompareTag("Goal"))
         {
-            // print("Collison");
             m_hasFoundGoal = true;
         }
     }
@@ -184,7 +181,7 @@ public class Player : MonoBehaviour
         else
             // Q[currentState][currentAction] += 0.01f * (reward - Q[currentState][currentAction]);
             q.Update(currentState, currentAction, 0.0f, reward, isEndState);
-        // currentState = nextState;
+        currentState = nextState;
     }
 
     public void UpdateModel(float reward)
@@ -225,6 +222,7 @@ public class Player : MonoBehaviour
             PlayerState playerState = new PlayerState(nextState.Item1, nextState.Item2);
             policy.AddPlayerState(playerState);
             q.AddPlayerState(playerState);
+            // model.AddPlayerState(playerState);
             return GetMaxQ(nextState);
         }
     }
@@ -243,7 +241,7 @@ public class Player : MonoBehaviour
     {
         Serializer.WriteToBinaryFile<Policy>("Assets/Resources/policy.txt", policy);
         Serializer.WriteToBinaryFile<ActionValue>("Assets/Resources/Q.txt", q);
-        Serializer.WriteToBinaryFile<Model>("Assets/Resources/model.txt", model);
+        // Serializer.WriteToBinaryFile<Model>("Assets/Resources/model.txt", model);
     }
 
     public void LoadData()
@@ -253,16 +251,16 @@ public class Player : MonoBehaviour
             //Load Q and Policy and initialize the StateDictionary
             policy = Serializer.ReadFromBinaryFile<Policy>("Assets/Resources/policy.txt");
             q = Serializer.ReadFromBinaryFile<ActionValue>("Assets/Resources/Q.txt");
-            model = Serializer.ReadFromBinaryFile<Model>("Assets/Resources/model.txt");
+            // model = Serializer.ReadFromBinaryFile<Model>("Assets/Resources/model.txt");
             policy.InitializeStateDictionary();
             q.InitializeStateDictionary();
-            model.InitializeStateDictionary();
+            // model.InitializeStateDictionary();
         }
         else
         {
             policy = new Policy();
             q = new ActionValue();
-            model = new Model();
+            // model = new Model();
         }
     }
 }
